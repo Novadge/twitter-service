@@ -1,0 +1,6 @@
+*.log
+/.gradle
+/.nb-gradle
+/.settings
+/build
+/target
