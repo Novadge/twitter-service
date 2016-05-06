@@ -13,6 +13,7 @@ import twitter4j.Twitter;
 import twitter4j.Status;
 import twitter4j.StatusUpdate;
 import twitter4j.DirectMessage
+import twitter4j.Paging
 import twitter4j.ResponseList
 import groovy.json.*
 import grails.transaction.Transactional
@@ -135,8 +136,9 @@ class TwitterService {
     
     List<Map> getUserTimeline(Map props,Map twitterMap){
         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        Paging paging = new Paging(props.page, props.count, props.sinceId) 
+        List<Status> result = twitter.getUserTimeline(props.userId as long,paging)//:twitter.getUserTimeline()
         
-        List<Status> result = twitter.getUserTimeline(screenName)//:twitter.getUserTimeline()
         return  twitterService.formatStatus(result)
         
     }
