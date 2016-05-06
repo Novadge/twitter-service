@@ -7,6 +7,8 @@ import sun.misc.BASE64Encoder
 import groovy.transform.CompileStatic
 import twitter4j.conf.ConfigurationBuilder
 import twitter4j.TwitterFactory;
+import twitter4j.auth.AccessToken
+import twitter4j.auth.RequestToken
 import twitter4j.Twitter;
 import twitter4j.Status;
 import twitter4j.StatusUpdate;
@@ -83,6 +85,67 @@ class TwitterService {
         // get twitter instance
         Twitter twitter = tf.getInstance();
         return twitter
+    }
+    
+    String getToken(String requestToken){
+        RequestToken req = (RequestToken) requestToken
+        
+        return req.getToken()
+    }
+    
+    String getOAuthRequestToken(Map props, Map twitterMap){
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret)
+        RequestToken requestToken = null
+        if(props.callbackUrl){
+            requestToken = twitter.getOAuthRequestToken(props.callbackUrl);
+        }
+        else{
+            requestToken = twitter.getOAuthRequestToken()
+        }
+        
+        return requestToken.getToken()
+    }
+    
+    String getAuthorizationUrl(String oAuthRequestToken){
+                
+        RequestToken requestToken = (RequestToken) oAuthRequestToken
+        return requestToken.getAuthorizationURL()
+        
+    }
+    /**
+     * Get oAuth access token and secret
+     * @param props.oauth_verifier
+     * @param props.requestToken
+     * @param twitterMap.consumerKey
+     * @param twitterMap.consumerSecret
+     * */
+    Map getOAuthAccessToken(Map props,Map twitterMap){
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret)
+        RequestToken requestToken = (RequestToken) props.requestToken
+        
+        AccessToken accessToken = twitter.getOAuthAccessToken(requestToken, props.oauth_verifier)
+        Map result = [:]
+        result.put('screenName',accessToken.getScreenName())
+        result.put('userId',accessToken.getUserId())
+        result.put('accessToken',accessToken.getToken())
+        result.put('accessTokenSecret',accessToken.getTokenSecret())
+        return result
+    }
+    
+    List<Map> getUserTimeline(Map props,Map twitterMap){
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        
+        List<Status> result = twitter.getUserTimeline(screenName)//:twitter.getUserTimeline()
+        return  twitterService.formatStatus(result)
+        
+    }
+    
+    /**
+     * @param props.statusId : twitter status Id
+     * */
+    Map showStatus(Map props,Map twitterMap){
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        return twitterService.formatStatus(twitter.showStatus(new Long(props.statusId)))
     }
     
     
@@ -169,15 +232,17 @@ class TwitterService {
      * @param text : body of the tweet
      * @param twitter : configured twitter object
      * */
-    Map updateStatus(String statusId="",String text, Twitter twitter) {
+    Map updateStatus(Map props, Map twitterMap) {
         
+         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+       
         Status update = null;
         StatusUpdate statusUpdate = null
-        if(statusId){// if this is reply to a status(tweet)
-            statusUpdate = new StatusUpdate(text).inReplyToStatusId(statusId as long)
+        if(props.statusId){// if this is reply to a status(tweet)
+            statusUpdate = new StatusUpdate(props.text).inReplyToStatusId(props.statusId as long)
         }
         else{
-           statusUpdate = new StatusUpdate(text)//.inReplyToStatusId(statusId as long) 
+           statusUpdate = new StatusUpdate(props.text)//.inReplyToStatusId(statusId as long) 
         }
         update = twitter.updateStatus(statusUpdate);
            
@@ -185,17 +250,25 @@ class TwitterService {
        
     }
     
+    
+    
     /**
      * Used to post a tweet to twitter 
-     * @param props.statusId : tweet to which this is a reply
-     * @param props.text : body of the tweet
-     * @param props.twitter : configured twitter object
+     * @param props.statusId : tweet to destroy
      * */
-    Map updateStatus(Map props) {
+    Map destroyStatus(Map props, Map twitterMap) {
         
-        return updateStatus(props.statusId ,props.text, props.twitter)
+         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+         
+         Status status = twitter.destroyStatus(props.statusId as long);
+        return formatStatus(status)
+        
+       
     }
     
+    
+    
+  
     /**
      * Used to send direct messages to a user  
      * @param recipientId : user id for the recipient
