@@ -1,7 +1,7 @@
 package com.novadge.social
 
 import grails.converters.JSON
-import org.codehaus.groovy.grails.commons.GrailsApplication
+
 import sun.misc.BASE64Encoder
 
 import groovy.transform.CompileStatic
@@ -28,7 +28,7 @@ import java.security.SecureRandom;
 
 @Transactional
 class TwitterService {   
-    GrailsApplication grailsApplication
+    
     
     public final static String urlBase = "https://api.twitter.com/";
     public final static String apiVersion = "1.1/";
