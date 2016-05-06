@@ -93,23 +93,22 @@ class TwitterService {
         return req.getToken()
     }
     
-    String getOAuthRequestToken(Map props, Map twitterMap){
+    RequestToken getOAuthRequestToken(Map props, Map twitterMap){
         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret)
         RequestToken requestToken = null
         if(props.callbackUrl){
-            requestToken = twitter.getOAuthRequestToken(props.callbackUrl);
+            return twitter.getOAuthRequestToken(props.callbackUrl);
         }
         else{
-            requestToken = twitter.getOAuthRequestToken()
+            return twitter.getOAuthRequestToken()
         }
         
-        return requestToken.getToken()
+        
     }
     
     String getAuthorizationUrl(String oAuthRequestToken){
-                
-        RequestToken requestToken = (RequestToken) oAuthRequestToken
-        return requestToken.getAuthorizationURL()
+        return conf.getOAuthAuthorizationURL() + "?oauth_token=" + oAuthRequestToken;        
+        
         
     }
     /**
@@ -120,10 +119,12 @@ class TwitterService {
      * @param twitterMap.consumerSecret
      * */
     Map getOAuthAccessToken(Map props,Map twitterMap){
+        print "map = ${twitterMap}" 
         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret)
-        RequestToken requestToken = (RequestToken) props.requestToken
+        print "Got twitter"
         
-        AccessToken accessToken = twitter.getOAuthAccessToken(requestToken, props.oauth_verifier)
+        AccessToken accessToken = twitter.getOAuthAccessToken(props.requestToken, props.oAuthVerifier)
+       print "got access token ${accessToken}"
         Map result = [:]
         result.put('screenName',accessToken.getScreenName())
         result.put('userId',accessToken.getUserId())
