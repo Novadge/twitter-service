@@ -135,11 +135,28 @@ class TwitterService {
     }
     
     List<Map> getUserTimeline(Map props,Map twitterMap){
-        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
-        Paging paging = new Paging(props.page, props.count, props.sinceId) 
-        List<Status> result = twitter.getUserTimeline(props.userId as long,paging)//:twitter.getUserTimeline()
+        //Paging(int page, int count, long sinceId, long maxId) 
+        Paging paging = null
+        int page = props.page? props.page as int : 1
+        int count = props.count? props.count as int : 30
+        int sinceId = props.sinceId? props.sinceId as long : 1
+        if(props.maxId){
+            paging = new Paging(page, count,sinceId,props.maxId as long) 
+        }
+        else{
+            paging = new Paging(page,count,sinceId)
+        }
         
-        return  twitterService.formatStatus(result)
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        
+        List<Status> result = []//:twitter.getUserTimeline()
+        if(props.userId){
+            result = twitter.getUserTimeline(props.userId as long,paging)
+        }
+        else{
+            result = twitter.getUserTimeline(props.screenName,paging)
+        }
+        return  formatStatus(result)
         
     }
     
@@ -148,7 +165,7 @@ class TwitterService {
      * */
     Map showStatus(Map props,Map twitterMap){
         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
-        return twitterService.formatStatus(twitter.showStatus(new Long(props.statusId)))
+        return formatStatus(twitter.showStatus(new Long(props.statusId)))
     }
     
     
