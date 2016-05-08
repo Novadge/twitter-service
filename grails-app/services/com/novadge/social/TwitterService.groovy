@@ -88,12 +88,7 @@ class TwitterService {
         return twitter
     }
     
-    String getToken(String requestToken){
-        RequestToken req = (RequestToken) requestToken
         
-        return req.getToken()
-    }
-    
     RequestToken getOAuthRequestToken(Map props, Map twitterMap){
         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret)
         RequestToken requestToken = null
@@ -107,25 +102,25 @@ class TwitterService {
         
     }
     
-    String getAuthorizationUrl(String oAuthRequestToken){
-        return conf.getOAuthAuthorizationURL() + "?oauth_token=" + oAuthRequestToken;        
+    String getAuthorizationURL(RequestToken req){
+        return req.getAuthorizationURL()       
         
         
     }
     /**
      * Get oAuth access token and secret
-     * @param props.oauth_verifier
+     * @param props.oAuthVerifier
      * @param props.requestToken
      * @param twitterMap.consumerKey
      * @param twitterMap.consumerSecret
      * */
     Map getOAuthAccessToken(Map props,Map twitterMap){
-        print "map = ${twitterMap}" 
+        // get twitter object
         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret)
-        print "Got twitter"
         
+        // get access token
         AccessToken accessToken = twitter.getOAuthAccessToken(props.requestToken, props.oAuthVerifier)
-       print "got access token ${accessToken}"
+        // return access token properties in a map
         Map result = [:]
         result.put('screenName',accessToken.getScreenName())
         result.put('userId',accessToken.getUserId())
@@ -134,7 +129,52 @@ class TwitterService {
         return result
     }
     
+    /**
+     * get statuses ( tweets ) from a user timeline 
+     * @param props.page : page number
+     * @param props.count : number of statuses
+     * @param props.sinceId : status id to start from
+     * @param props.maxId : status id to stop at
+     * @param twitterMap : configured twitter object
+     * */
     List<Map> getUserTimeline(Map props,Map twitterMap){
+        //Paging(int page, int count, long sinceId, long maxId) 
+        Paging paging = null
+        int page = props.page? props.page as int : 1
+        int count = props.count? props.count as int : 30
+        int sinceId = props.sinceId? props.sinceId as long : 1
+        if(props.maxId){
+            paging = new Paging(page, count,sinceId,props.maxId as long) 
+        }
+        else{
+            paging = new Paging(page,count,sinceId)
+        }
+        // get twitter object
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        
+        List<Status> result = [] // new empty list
+        if(props.userId){ // use userId if available because screenName can change
+            result = twitter.getUserTimeline(props.userId as long,paging)
+        }
+        else if(props.screenName){
+            result = twitter.getUserTimeline(props.screenName,paging)
+        }
+        else{
+//            TODO: find something exquisite to do here...
+        }
+        return  formatStatus(result)
+        
+    }
+    
+    /**
+     * get statuses ( tweets ) where the authenticated user was mentioned
+     * @param props.page : page number
+     * @param props.count : number of statuses
+     * @param props.sinceId : status id to start from
+     * @param props.maxId : status id to stop at
+     * @param twitterMap : configured twitter object
+     * */
+    List<Map> getMentionsTimeline(Map props,Map twitterMap){
         //Paging(int page, int count, long sinceId, long maxId) 
         Paging paging = null
         int page = props.page? props.page as int : 1
@@ -149,19 +189,137 @@ class TwitterService {
         
         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
         
-        List<Status> result = []//:twitter.getUserTimeline()
-        if(props.userId){
-            result = twitter.getUserTimeline(props.userId as long,paging)
-        }
-        else{
-            result = twitter.getUserTimeline(props.screenName,paging)
-        }
+        List<Status> result = twitter.getMentionsTimeline(paging)
+        
         return  formatStatus(result)
         
     }
     
+    
     /**
-     * @param props.statusId : twitter status Id
+     * Used to send direct messages to a user  
+     * @param props.recipientId : user id for the recipient
+     * @param props.text : body of the tweet
+     * @param twitterMap : configured twitter object
+     * */
+    Map sendDirectMessage(Map props, Map twitterMap) {
+        
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        DirectMessage message = null
+        if(props.recipientId){
+            message = twitter.sendDirectMessage(props.recipientId as long, props.text);
+        }
+        else if(props.screenName){
+            message = twitter.sendDirectMessage(props.screenName, props.text);
+        }
+        else{
+            message = null
+        }
+         
+    
+        return formatDirectMessage(message)
+       
+    }
+    
+    
+    /**
+     * Used to retrieve direct messages for a user 
+     * @param props.page : page number
+     * @param props.count : number of direct messages
+     * @param props.sinceId : directMessage id to start from
+     * @param props.maxId : direct message id to stop at
+     * @param twitterMap : configured twitter object
+     * */
+    List<Map> getDirectMessages(Map props,Map twitterMap){
+         
+        Paging paging = null
+        int page = props.page? props.page as int : 1
+        int count = props.count? props.count as int : 30
+        int sinceId = props.sinceId? props.sinceId as long : 1
+        if(props.maxId){
+            paging = new Paging(page, count,sinceId,props.maxId as long) 
+        }
+        else{
+            paging = new Paging(page,count,sinceId)
+        }
+        // get twitter object
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        
+        List<DirectMessage> result = twitter.getDirectMessages(paging)
+        
+        return  formatDirectMessage(result)
+        
+    }
+    
+    
+    /**
+     * Used to retrieve sent direct messages for a user 
+     * @param props.page : page number
+     * @param props.count : number of direct messages
+     * @param props.sinceId : directMessage id to start from
+     * @param props.maxId : direct message id to stop at
+     * @param twitterMap : configured twitter object
+     * */
+    List<Map> getSentDirectMessages(Map props,Map twitterMap){
+        
+        Paging paging = null
+        int page = props.page? props.page as int : 1
+        int count = props.count? props.count as int : 30
+        int sinceId = props.sinceId? props.sinceId as long : 1
+        if(props.maxId){
+            paging = new Paging(page, count,sinceId,props.maxId as long) 
+        }
+        else{
+            paging = new Paging(page,count,sinceId)
+        }
+        
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        
+        List<DirectMessage> result = twitter.getSentDirectMessages(paging)
+        
+        return  formatDirectMessage(result)
+        
+    }
+    
+    /**
+     * Used to retrieve a direct message for a user 
+     * @param props.id : direct message id
+     * @param twitterMap : configured twitter object
+     * */
+    Map showDirectMessage(Map props,Map twitterMap){
+        
+        int id = props.id as long
+        
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        
+        DirectMessage result = twitter.showDirectMessage(id)
+        
+        return  formatDirectMessage(result)
+        
+    }
+    
+    
+    /**
+     * Used to delete a direct message for a user 
+     * @param props.id : direct message id
+     * @param twitterMap : configured twitter object
+     * */
+    Map destroyDirectMessage(Map props,Map twitterMap){
+        //Paging(int page, int count, long sinceId, long maxId) 
+        int id = props.id as long
+        
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        
+        DirectMessage result = twitter.destroyDirectMessage(id)
+        
+        return  formatDirectMessage(result)
+        
+    }
+    
+    /**
+     * Used to retrieve a status(tweet) for a user 
+     * @param props.statusId : direct message id
+     * @param twitterMap : configured twitter object
      * */
     Map showStatus(Map props,Map twitterMap){
         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
@@ -289,30 +447,10 @@ class TwitterService {
     
     
   
-    /**
-     * Used to send direct messages to a user  
-     * @param recipientId : user id for the recipient
-     * @param text : body of the tweet
-     * @param twitter : configured twitter object
-     * */
-    Map sendDirectMessage(String recipientId, String text, Twitter twitter) {
-        
-        DirectMessage message = twitter.sendDirectMessage(recipientId as long, text);
     
-        return formatDirectMessage(message)
-       
-    }
     
-    /**
-     * Used to send direct messages to a user  
-     * @param props.recipientId : user id for the recipient
-     * @param props.text : body of the tweet
-     * @param props.twitter : configured twitter object
-     * */
-    Map sendDirectMessage(Map props) {
-        
-        sendDirectMessage(props.recipientId, props.text, props.twitter)
-    }
+    
+    
     
     
     
