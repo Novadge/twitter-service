@@ -154,10 +154,22 @@ class TwitterService {
         
         List<Status> result = [] // new empty list
         if(props.userId){ // use userId if available because screenName can change
-            result = twitter.getUserTimeline(props.userId as long,paging)
+//            result += twitter.getUserTimeline(props.userId as long,paging)
+             while(result.size() < count){
+                paging.setPage(page)                
+                result += twitter.getUserTimeline(props.userId as long,paging)
+                // increment page 
+                page++
+            }
         }
         else if(props.screenName){
-            result = twitter.getUserTimeline(props.screenName,paging)
+            while(result.size() < count){
+                paging.setPage(page)                
+                result += twitter.getUserTimeline(props.screenName,paging)  
+                // increment page 
+                page++
+            }
+            
         }
         else{
 //            TODO: find something exquisite to do here...
