@@ -369,10 +369,17 @@ class TwitterService {
         map['inReplyToUserIdStr'] = "${map?.inReplyToUserId}"
 
         map['inReplyToStatusIdStr'] = "${map?.inReplyToStatusId}"
-
+               
         map['userId'] = "${map?.user.id}" 
         map['screenName'] = "${map?.user.screenName}" 
-       
+        map['profileImageUrl'] = "${map?.user.profileImageUrl}" 
+        map.user = status.user.getProperties() as Map
+        map.mediaEntities = status.mediaEntities.getProperties()as Map
+        map.hashtagEntities = status.hashtagEntities.getProperties() as Map
+        map.userMentionEntities = status.userMentionEntities.getProperties() as Map
+        map.extendedMediaEntities = status.extendedMediaEntities.getProperties() as Map
+        map.retweetedStatus = status.retweetedStatus.getProperties() as Map
+        
         return map
 
     }
