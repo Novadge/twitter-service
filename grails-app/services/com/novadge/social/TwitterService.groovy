@@ -14,6 +14,8 @@ import twitter4j.Status;
 import twitter4j.StatusUpdate;
 import twitter4j.DirectMessage
 import twitter4j.Paging
+import twitter4j.Query
+import twitter4j.QueryResult
 import twitter4j.ResponseList
 import groovy.json.*
 import grails.transaction.Transactional
@@ -55,14 +57,14 @@ class TwitterService {
      * */
     Twitter getTwitter(String oAuthConsumerKey,String oAuthConsumerSecret){ 
         //create config object
-    ConfigurationBuilder cb = new ConfigurationBuilder();
-    cb.setDebugEnabled(true)
-      .setOAuthConsumerKey(oAuthConsumerKey)
-      .setOAuthConsumerSecret(oAuthConsumerSecret)
-//use config object to get twitter factory object
-    TwitterFactory tf = new TwitterFactory(cb.build());
-    Twitter twitter = tf.getInstance();
-    return twitter
+        ConfigurationBuilder cb = new ConfigurationBuilder();
+        cb.setDebugEnabled(true)
+        .setOAuthConsumerKey(oAuthConsumerKey)
+        .setOAuthConsumerSecret(oAuthConsumerSecret)
+        //use config object to get twitter factory object
+        TwitterFactory tf = new TwitterFactory(cb.build());
+        Twitter twitter = tf.getInstance();
+        return twitter
     }
     
     /**
@@ -73,15 +75,15 @@ class TwitterService {
      * @param oAuthAccessTokenSecret : User or application access token secret
      * @returns Twitter : twitter object
      * */
-     Twitter getTwitter(String oAuthConsumerKey,String oAuthConsumerSecret,
+    Twitter getTwitter(String oAuthConsumerKey,String oAuthConsumerSecret,
         String oAuthAccessToken,String oAuthAccessTokenSecret){  
         // create configuration builder and set properties
         ConfigurationBuilder cb = new ConfigurationBuilder();
         cb.setDebugEnabled(true)
-      .setOAuthConsumerKey(oAuthConsumerKey)
-      .setOAuthConsumerSecret(oAuthConsumerSecret)
-      .setOAuthAccessToken(oAuthAccessToken)
-      .setOAuthAccessTokenSecret(oAuthAccessTokenSecret);
+        .setOAuthConsumerKey(oAuthConsumerKey)
+        .setOAuthConsumerSecret(oAuthConsumerSecret)
+        .setOAuthAccessToken(oAuthAccessToken)
+        .setOAuthAccessTokenSecret(oAuthAccessTokenSecret);
         TwitterFactory tf = new TwitterFactory(cb.build());
         // get twitter instance
         Twitter twitter = tf.getInstance();
@@ -130,6 +132,22 @@ class TwitterService {
     }
     
     /**
+     * search for tweets from a user timeline 
+     * @param props.query : search query eg "source:twitter4j yusukey"
+     
+     * @param twitterMap : configured twitter object
+     * */
+    List<Map> search(Map props,Map twitterMap){
+        // get twitter object
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        
+        Query query = new Query(props.query);
+        QueryResult result = twitter.search(query);
+        
+        return  formatStatus(result)
+    }
+    
+    /**
      * get statuses ( tweets ) from a user timeline 
      * @param props.page : page number
      * @param props.count : number of statuses
@@ -154,8 +172,8 @@ class TwitterService {
         
         List<Status> result = [] // new empty list
         if(props.userId){ // use userId if available because screenName can change
-//            result += twitter.getUserTimeline(props.userId as long,paging)
-             while(result.size() < count){
+            //            result += twitter.getUserTimeline(props.userId as long,paging)
+            while(result.size() < count){
                 paging.setPage(page)                
                 result += twitter.getUserTimeline(props.userId as long,paging)
                 // increment page 
@@ -172,7 +190,7 @@ class TwitterService {
             
         }
         else{
-//            TODO: find something exquisite to do here...
+            //            TODO: find something exquisite to do here...
         }
         return  formatStatus(result)
         
@@ -431,7 +449,7 @@ class TwitterService {
      * */
     Map updateStatus(Map props, Map twitterMap) {
         
-         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
        
         Status update = null;
         StatusUpdate statusUpdate = null
@@ -439,7 +457,7 @@ class TwitterService {
             statusUpdate = new StatusUpdate(props.text).inReplyToStatusId(props.statusId as long)
         }
         else{
-           statusUpdate = new StatusUpdate(props.text)//.inReplyToStatusId(statusId as long) 
+            statusUpdate = new StatusUpdate(props.text)//.inReplyToStatusId(statusId as long) 
         }
         update = twitter.updateStatus(statusUpdate);
            
@@ -455,9 +473,9 @@ class TwitterService {
      * */
     Map destroyStatus(Map props, Map twitterMap) {
         
-         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
          
-         Status status = twitter.destroyStatus(props.statusId as long);
+        Status status = twitter.destroyStatus(props.statusId as long);
         return formatStatus(status)
         
        
@@ -701,21 +719,21 @@ class TwitterService {
     }
     
     private  Date cvtToGmt( Date date ){
-    TimeZone tz = TimeZone.getDefault();
-    Date ret = new Date( date.getTime() - tz.getRawOffset() );
+        TimeZone tz = TimeZone.getDefault();
+        Date ret = new Date( date.getTime() - tz.getRawOffset() );
 
-    // if we are now in DST, back off by the delta.  Note that we are checking the GMT date, this is the KEY.
-    if ( tz.inDaylightTime( ret )){
-        Date dstDate = new Date( ret.getTime() - tz.getDSTSavings() );
+        // if we are now in DST, back off by the delta.  Note that we are checking the GMT date, this is the KEY.
+        if ( tz.inDaylightTime( ret )){
+            Date dstDate = new Date( ret.getTime() - tz.getDSTSavings() );
 
-        // check to make sure we have not crossed back into standard time
-        // this happens when we are on the cusp of DST (7pm the day before the change for PDT)
-        if ( tz.inDaylightTime( dstDate )){
-            ret = dstDate;
+            // check to make sure we have not crossed back into standard time
+            // this happens when we are on the cusp of DST (7pm the day before the change for PDT)
+            if ( tz.inDaylightTime( dstDate )){
+                ret = dstDate;
+            }
         }
-     }
-     return ret;
-}
+        return ret;
+    }
         
     String getOAuthSignatureMethod(){
         return "HMAC-SHA1"
@@ -835,7 +853,7 @@ class TwitterService {
             }
         }
               
-            restClient.setHeaders("Authorization": "Bearer ${bearerToken}")
+        restClient.setHeaders("Authorization": "Bearer ${bearerToken}")
             
             
         restClient.get(path: path, query: queryMap) { resp, json ->
