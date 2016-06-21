@@ -16,6 +16,7 @@ import twitter4j.DirectMessage
 import twitter4j.Paging
 import twitter4j.Query
 import twitter4j.QueryResult
+import twitter4j.RateLimitStatus
 import twitter4j.ResponseList
 import groovy.json.*
 import grails.transaction.Transactional
@@ -109,6 +110,7 @@ class TwitterService {
         
         
     }
+    
     /**
      * Get oAuth access token and secret
      * @param props.oAuthVerifier
@@ -131,6 +133,23 @@ class TwitterService {
         return result
     }
     
+    
+    /**
+     * Get rate limit status
+     * 
+     * */
+    Map rateLimitStatus(String endpoint, Map twitterMap){
+        // get twitter object
+        Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,
+        twitterMap.accessToken,twitterMap.accessTokenSecret)
+    
+        Map<String ,RateLimitStatus> rateLimitStatus = twitter.getRateLimitStatus();
+        
+        
+        return rateLimitStatus
+    }
+    
+//    
     /**
      * search for tweets from a user timeline 
      * @param props.query : search query eg "source:twitter4j yusukey"
@@ -144,7 +163,7 @@ class TwitterService {
         Query query = new Query(props.query);
         QueryResult result = twitter.search(query);
         
-        return  formatStatus(result)
+        return  formatStatus(result.getTweets())
     }
     
     /**
@@ -159,7 +178,7 @@ class TwitterService {
         //Paging(int page, int count, long sinceId, long maxId) 
         Paging paging = null
         int page = props.page? props.page as int : 1
-        int count = props.count? props.count as int : 30
+        int count = props.count? props.count as int : 10
         int sinceId = props.sinceId? props.sinceId as long : 1
         if(props.maxId){
             paging = new Paging(page, count,sinceId,props.maxId as long) 
@@ -171,16 +190,8 @@ class TwitterService {
         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
         
         List<Status> result = [] // new empty list
-        if(props.userId){ // use userId if available because screenName can change
-            //            result += twitter.getUserTimeline(props.userId as long,paging)
-            while(result.size() < count){
-                paging.setPage(page)                
-                result += twitter.getUserTimeline(props.userId as long,paging)
-                // increment page 
-                page++
-            }
-        }
-        else if(props.screenName){
+        
+        if(props.screenName){
             while(result.size() < count){
                 paging.setPage(page)                
                 result += twitter.getUserTimeline(props.screenName,paging)  
@@ -189,9 +200,19 @@ class TwitterService {
             }
             
         }
-        else{
-            //            TODO: find something exquisite to do here...
+        else if(props.userId){ // use userId if available because screenName can change
+            //            result += twitter.getUserTimeline(props.userId as long,paging)
+            while(result.size() < count){
+                paging.setPage(page)                
+                result += twitter.getUserTimeline(props.userId as long,paging)
+                // increment page 
+                page++
+            }
         }
+        else{
+            
+        }
+        
         return  formatStatus(result)
         
     }
@@ -438,6 +459,19 @@ class TwitterService {
             list.add(formatDirectMessage(dm))
         }
         return list
+    }
+    
+    
+    /**
+     * Used to format twitter4j rate limit as Map 
+     * with added string ids (idStr) for properties
+     * @param status : status object
+     * @returns Map: a map object that contains properties of status
+     * 
+     * */
+    Map formatRateLimit(){
+        
+        
     }
     
     
