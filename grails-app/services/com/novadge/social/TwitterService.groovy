@@ -175,45 +175,119 @@ class TwitterService {
      * @param twitterMap : configured twitter object
      * */
     List<Map> getUserTimeline(Map props,Map twitterMap){
-        //Paging(int page, int count, long sinceId, long maxId) 
-        Paging paging = null
-        int page = props.page? props.page as int : 1
+        
+        
         int count = props.count? props.count as int : 10
-        int sinceId = props.sinceId? props.sinceId as long : 1
-        if(props.maxId){
-            paging = new Paging(page, count,sinceId,props.maxId as long) 
+         // get twitter object
+        
+       Paging paging = null
+        
+        
+        if(props.page && props.sinceId && props.count && props.sinceId && props.maxId){
+
+            paging = new Paging(props.page as int, props.count as int, props.sinceId as long, props.maxId as long)
+            
+        }
+        else if(props.page && props.count && props.sinceId){
+
+            paging = new Paging(props.page as int, props.count as int, props.sinceId as long)
+            
+        }
+        else if (props.page && props.count){
+            paging = new Paging(props.page as int, props.count as int) 
+            
+        } 
+        else if(props.page && props.sinceId){
+            paging = new Paging(props.page as int, props.sinceId as long)
+            
+        }
+        else if(props.page){
+            paging = new Paging(props.page as int)
+            
+        }
+        else if(props.sinceId){
+            paging = new Paging(props.sinceId as long)
+            
         }
         else{
-            paging = new Paging(page,count,sinceId)
+            paging = new Paging()
+            
         }
-        // get twitter object
+        
+        // initialize twitter object
         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
         
-        List<Status> result = [] // new empty list
-        
+               
+        List<Status> tweetList = [] // new empty list
+        List<Status> result = []
+        long sinceId = 0;
+        int index = props.page? props.page as int : 0
         if(props.screenName){
-            while(result.size() < count){
-                paging.setPage(page)                
-                result += twitter.getUserTimeline(props.screenName,paging)  
-                // increment page 
-                page++
+            //priming read
+            result = twitter.getUserTimeline(props.screenName,paging) 
+            // add result to tweetList
+                tweetList += result
+            while(result && tweetList.size() <= count){
+                //sort the result by tweet id
+                result.sort({it.id})
+                
+                // increment page index
+                index++
+                // update paging object
+                paging.setPage(index)
+                // pick the last element id
+                sinceId = result.get(result.size()-1).id
+                // update the paging object
+//                paging.setSinceId(sinceId)
+                paging.setMaxId(result.get(0).id)
+                
+                // retrieve more ...                
+                result = twitter.getUserTimeline(props.screenName,paging)
+                               
+                // add result to tweetList
+                tweetList += result
+                
+                // increment page index
+                
             }
             
         }
-        else if(props.userId){ // use userId if available because screenName can change
-            //            result += twitter.getUserTimeline(props.userId as long,paging)
-            while(result.size() < count){
-                paging.setPage(page)                
-                result += twitter.getUserTimeline(props.userId as long,paging)
-                // increment page 
-                page++
+        else if(props.userId){
+            //priming read
+            result = twitter.getUserTimeline(props.userId,paging) 
+            // add result to tweetList
+                tweetList += result
+            while(result){
+                //sort the result by tweet id
+                result.sort({it.id})
+                // add result to tweetList
+                
+                // increment page index
+                index++
+                // update paging object
+                paging.setPage(index)
+                // pick the last element id
+                sinceId = result.get(result.size()-1).id
+                // update the paging object
+//                paging.setSinceId(sinceId)
+                paging.setMaxId(result.get(0).id)
+                
+                // retrieve more
+                result = twitter.getUserTimeline(props.userId as long,paging)
+                // add result to tweetList
+                tweetList += result              
+                
+                
+                // increment page index
+                
             }
+            
         }
         else{
-            
+           tweetList = twitter.getUserTimeline()  
         }
         
-        return  formatStatus(result)
+        return  formatStatus(tweetList)
         
     }
     
@@ -226,23 +300,76 @@ class TwitterService {
      * @param twitterMap : configured twitter object
      * */
     List<Map> getMentionsTimeline(Map props,Map twitterMap){
+        
         //Paging(int page, int count, long sinceId, long maxId) 
         Paging paging = null
-        int page = props.page? props.page as int : 1
-        int count = props.count? props.count as int : 30
-        int sinceId = props.sinceId? props.sinceId as long : 1
-        if(props.maxId){
-            paging = new Paging(page, count,sinceId,props.maxId as long) 
+        
+        
+        if(props.page && props.sinceId && props.count && props.sinceId && props.maxId){
+
+            paging = new Paging(props.page as int, props.count as int, props.sinceId as long, props.maxId as long)
+            
+        }
+        else if(props.page && props.count && props.sinceId){
+
+            paging = new Paging(props.page as int, props.count as int, props.sinceId as long)
+            
+        }
+        else if (props.page && props.count){
+            paging = new Paging(props.page as int, props.count as int) 
+            
+        } 
+        else if(props.page && props.sinceId){
+            paging = new Paging(props.page as int, props.sinceId as long)
+            
+        }
+        else if(props.page){
+            paging = new Paging(props.page as int)
+            
+        }
+        else if(props.sinceId){
+            paging = new Paging(props.sinceId as long)
+            
         }
         else{
-            paging = new Paging(page,count,sinceId)
+            paging = new Paging()
+            
         }
         
+        // initialize twitter object
         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
         
-        List<Status> result = twitter.getMentionsTimeline(paging)
+        List<Status> tweetList = [] // new empty list
+        List<Status> result = []
+        long sinceId = 0;
+        int index = props.page? props.page as int : 0 
+        result = twitter.getMentionsTimeline(paging)
+            // add result to tweetList
+                tweetList += result
+            while(result){
+                //sort the result by tweet id
+                result.sort({it.id})
+                
+                // increment page index
+                index++
+                // update paging object
+                paging.setPage(index)
+                // pick the last element id
+                sinceId = result.get(result.size()-1).id
+                // update the paging object
+//                paging.setSinceId(sinceId)
+                paging.setMaxId(result.get(0).id)
+                // retrieve more ...                
+                result = twitter.getUserTimeline(props.screenName,paging)
+                               
+                // add result to tweetList
+                tweetList += result
+                
+                // increment page index
+                
+            }
         
-        return  formatStatus(result)
+        return  formatStatus(tweetList)
         
     }
     
