@@ -222,33 +222,35 @@ class TwitterService {
         List<Status> result = []
         long sinceId = 0;
         int index = props.page? props.page as int : 0
+        int remaining = 0;
         if(props.screenName){
             //priming read
             result = twitter.getUserTimeline(props.screenName,paging) 
             // add result to tweetList
-                tweetList += result
-            while(result && tweetList.size() <= count){
-                //sort the result by tweet id
-                result.sort({it.id})
                 
-                // increment page index
-                index++
-                // update paging object
-                paging.setPage(index)
-                // pick the last element id
-                sinceId = result.get(result.size()-1).id
-                // update the paging object
-//                paging.setSinceId(sinceId)
-                paging.setMaxId(result.get(0).id)
+                while((tweetList.size() <= count) && !result.isEmpty()){
                 
-                // retrieve more ...                
-                result = twitter.getUserTimeline(props.screenName,paging)
+                tweetList += result// add result to tweets list
+                
+                
+                result.sort({it.id})//sort the result by tweet id
+                
+                sinceId = Math.min(result.get(0).id,result.get(result.size()-1).id)// take the smallest tweet id from the list of tweets
+                
+                index++// increment page index
+                
+                paging.setPage(index)// update paging object
+                paging.setMaxId(sinceId)// set the lowest tweet id as the maximum tweet id in the next round of retrieval
+                
+                
+                remaining = count - tweetList.size()// set count to the remaining number of tweets
+                if(remaining <= 0){
+                    break;
+                }
+                paging.setCount(remaining)
                                
-                // add result to tweetList
-                tweetList += result
-                
-                // increment page index
-                
+                result = twitter.getUserTimeline(props.screenName,paging)// retrieve more ... 
+                               
             }
             
         }
@@ -257,29 +259,27 @@ class TwitterService {
             result = twitter.getUserTimeline(props.userId,paging) 
             // add result to tweetList
                 tweetList += result
-            while(result){
-                //sort the result by tweet id
-                result.sort({it.id})
-                // add result to tweetList
-                
-                // increment page index
-                index++
-                // update paging object
-                paging.setPage(index)
-                // pick the last element id
-                sinceId = result.get(result.size()-1).id
-                // update the paging object
-//                paging.setSinceId(sinceId)
-                paging.setMaxId(result.get(0).id)
-                
-                // retrieve more
-                result = twitter.getUserTimeline(props.userId as long,paging)
-                // add result to tweetList
-                tweetList += result              
+            while((tweetList.size() < count) && !result.isEmpty()){
+                tweetList += result// add result to tweets list
                 
                 
-                // increment page index
+                result.sort({it.id})//sort the result by tweet id
                 
+                sinceId = Math.min(result.get(0).id,result.get(result.size()-1).id)// take the smallest tweet id from the list of tweets
+                
+                index++// increment page index
+                
+                paging.setPage(index)// update paging object
+                paging.setMaxId(sinceId)// set the lowest tweet id as the maximum tweet id in the next round of retrieval
+                
+                
+                remaining = count - tweetList.size()// set count to the remaining number of tweets
+                if(remaining <= 0){
+                    break;
+                }
+                paging.setCount(remaining)
+                               
+                result = twitter.getUserTimeline(props.userId,paging)// retrieve more ... 
             }
             
         }
