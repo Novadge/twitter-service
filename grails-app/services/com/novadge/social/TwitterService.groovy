@@ -159,14 +159,14 @@ class TwitterService {
     List<Map> search(Map props,Map twitterMap){
         // get twitter object
         Twitter twitter = getTwitter(twitterMap.consumerKey,twitterMap.consumerSecret,twitterMap.accessToken,twitterMap.accessTokenSecret)
-        long count = props.count?: 100;
+        long count = props.count != null? props.count as long: 100;
         //Pages are not the best way to go.
         // If you are trying to get the 1000 most recent tweets in a search,
         // for example, you should use query.setMaxId() to the lowest # - 1
         // from your previous batch. If you are trying to get new(er)
         // tweets since your last query, you should use query.setSinceId()
         // to start from the value returned in result.getMaxId() from the previous batch
-        long maxId = props.maxId != null? props.maxId as long: 0;
+        long maxId = 8//= props.maxId != null? props.maxId as long: 0;
 
         Query query = new Query(props.query);
 
