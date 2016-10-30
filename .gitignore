@@ -1,6 +1,11 @@
-*.log
-/.gradle
-/.nb-gradle
-/.settings
-/build
-/target
+Thumbs.db
+.DS_Store
+.gradle
+build/
+.idea
+*.iml
+*.ipr
+*.iws
+.project
+.settings
+.classpath
