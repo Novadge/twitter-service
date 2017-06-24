@@ -655,7 +655,7 @@ class TwitterService {
     
     
     /**
-     * Used to post a tweet to twitter 
+     * Used to delete a tweet from twitter
      * @param props.statusId : tweet to destroy
      * */
     Map destroyStatus(Map props, Map twitterMap) {

@@ -76,8 +76,8 @@ grailsPublish {
     license {
         name = 'Apache-2.0'
     }
-    title = "Twitter"
-    desc = "Provides twitter integration features for Grails"
+    title = "Twitter-service"
+    desc = "Use twitter API to read and write twitter data "
     developers = [omasiri:"Omasirichukwu Udeinya"]
     portalUser = System.getenv('GRAILS_PORTAL_USER')
     portalPassword = System.getenv('GRAILS_PORTAL_PASSWORD')    
