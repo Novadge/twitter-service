@@ -418,12 +418,42 @@ class TwitterService {
      * @param sinceId: All tweets returned will have Id greater than this value
      * @return
      */
-    List<Map> getMentionsTimeline(Map twitterMap, int count = 10, long sinceId = 1){
-        Paging paging = new Paging(count: Math.min(count, 800), sinceId: sinceId ? sinceId : 1)
+    List<Map> getMentionsTimeline(Map twitterMap, int count = 10, long sinceId = 1, Long maxId = null){
+        Paging paging = new Paging(count: Math.min(count, 800), sinceId: Math.max(sinceId, 1))
+
+        if(maxId){
+            paging.maxId = maxId
+        }
+
         // initialize twitter object
         Twitter twitter = getTwitter(twitterMap.consumerKey, twitterMap.consumerSecret, twitterMap.accessToken, twitterMap.accessTokenSecret)
         List<Status> tweetList = twitter.getMentionsTimeline(paging)
         formatStatus(tweetList)
+    }
+
+
+    /**
+     *
+     * @param twitterMap: credentials
+     * @param count: maximum number of tweets to retrieve. Maximum is 800, as per Twitter API
+     * @param sinceId: All tweets returned will have Id greater than this value
+     * @return
+     */
+    List<Map> getDirectMessages(Map twitterMap, int count = 10, Long sinceId = null, Long maxId = null){
+        Paging paging = new Paging(count: Math.min(count, 800))
+
+        if(sinceId > 0){
+            paging.sinceId = sinceId
+        }
+
+        if(maxId > 0){
+            paging.maxId = maxId
+        }
+
+        // initialize twitter object
+        Twitter twitter = getTwitter(twitterMap.consumerKey, twitterMap.consumerSecret, twitterMap.accessToken, twitterMap.accessTokenSecret)
+        List<DirectMessage> messageList = twitter.getDirectMessages(paging)
+        formatDirectMessage(messageList)
     }
 
     /**
