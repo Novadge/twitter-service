@@ -50,6 +50,7 @@ class TwitterService {
                 .setOAuthConsumerKey(oAuthConsumerKey)
                 .setOAuthConsumerSecret(oAuthConsumerSecret)
                 .setTweetModeExtended(true)
+
         //use config object to get twitter factory object
         TwitterFactory tf = new TwitterFactory(cb.build());
         Twitter twitter = tf.getInstance();
