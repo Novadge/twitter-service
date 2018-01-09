@@ -46,10 +46,10 @@ class TwitterService {
     Twitter getTwitter(String oAuthConsumerKey, String oAuthConsumerSecret) {
         //create config object
         ConfigurationBuilder cb = new ConfigurationBuilder();
+        cb.setTweetModeExtended(true)
         cb.setDebugEnabled(true)
                 .setOAuthConsumerKey(oAuthConsumerKey)
                 .setOAuthConsumerSecret(oAuthConsumerSecret)
-                .setTweetModeExtended(true)
 
         //use config object to get twitter factory object
         TwitterFactory tf = new TwitterFactory(cb.build());
@@ -69,13 +69,13 @@ class TwitterService {
                        String oAuthAccessToken, String oAuthAccessTokenSecret, boolean isApplicationOnlyAuth = false) {
         // create configuration builder and set properties
         ConfigurationBuilder cb = new ConfigurationBuilder();
+        cb.setTweetModeExtended(true)
         cb.setDebugEnabled(true)
                 .setOAuthConsumerKey(oAuthConsumerKey)
                 .setOAuthConsumerSecret(oAuthConsumerSecret)
                 .setOAuthAccessToken(oAuthAccessToken)
                 .setOAuthAccessTokenSecret(oAuthAccessTokenSecret)
                 .setApplicationOnlyAuthEnabled(isApplicationOnlyAuth)
-                .setTweetModeExtended(true)
 
         TwitterFactory tf = new TwitterFactory(cb.build());
         // get twitter instance
@@ -1189,6 +1189,16 @@ class TwitterService {
 
     def getWebhookSubscription(Map props, Map twitterMap){
         def response = get("account_activity/webhooks/${props.webhookId}/subscriptions.json", twitterMap, [:])
+    }
+
+    /**
+     * Retrieve the list of active subscriptions to the webhook via the Direct Messages API
+     * @param props.wehbookId
+     * @param twitterMap
+     */
+    def getWebhookSubscriptionsList(Map props, Map twitterMap) {
+        def subscriptionsListResponse = get("account_activity/webhooks/${props.webhookId}/subscriptions/list.json", twitterMap, [:])
+        return subscriptionsListResponse
     }
 
     JSONObject convertToJSONObject(HttpResponse value) {
