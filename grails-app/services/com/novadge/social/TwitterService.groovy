@@ -29,6 +29,18 @@ class TwitterService {
     private static final String WWW_DETAILS = "See http://twitter4j.org/en/configuration.html for details";
 
 
+    final String CONST_ENV_NAME = "env-beta"
+    // All Account Activity API endpoints
+    String URL_CREATE_WEBHOOK_FMT = "account_activity/all/$CONST_ENV_NAME/webhooks.json" //webhook callback url
+    String URL_DELETE_WEBHOOK_FMT = "account_activity/all/$CONST_ENV_NAME/webhooks/%s.json" // [webhook_id]
+    String URL_UPDATE_WEBHOOK_FMT = "account_activity/all/$CONST_ENV_NAME/webhooks/%s.json" // [webhook_id]
+    String URL_GET_WEBHOOK_FMT = "account_activity/all/$CONST_ENV_NAME/webhooks.json"
+    String URL_GET_WEBHOOK_ID_FMT = "account_activity/all/webhooks.json"
+    String URL_UNSUBSCRIBE_FROM_WEBHOOK_FMT = "account_activity/all/$CONST_ENV_NAME/subscriptions.json"
+    String URL_SUBSCRIBE_TO_WEBHOOK_FMT = "account_activity/all/$CONST_ENV_NAME/subscriptions.json" //callback url
+    String URL_GET_WEBHOOK_SUBSCRIPTION_FMT = "account_activity/all/$CONST_ENV_NAME/subscriptions/list.json"
+
+
     static String getStatusUrl() {
         return statusUrl;
     }
@@ -46,10 +58,10 @@ class TwitterService {
     Twitter getTwitter(String oAuthConsumerKey, String oAuthConsumerSecret) {
         //create config object
         ConfigurationBuilder cb = new ConfigurationBuilder();
-        cb.setTweetModeExtended(true)
         cb.setDebugEnabled(true)
                 .setOAuthConsumerKey(oAuthConsumerKey)
                 .setOAuthConsumerSecret(oAuthConsumerSecret)
+                .setTweetModeExtended(true)
 
         //use config object to get twitter factory object
         TwitterFactory tf = new TwitterFactory(cb.build());
@@ -69,13 +81,13 @@ class TwitterService {
                        String oAuthAccessToken, String oAuthAccessTokenSecret, boolean isApplicationOnlyAuth = false) {
         // create configuration builder and set properties
         ConfigurationBuilder cb = new ConfigurationBuilder();
-        cb.setTweetModeExtended(true)
         cb.setDebugEnabled(true)
                 .setOAuthConsumerKey(oAuthConsumerKey)
                 .setOAuthConsumerSecret(oAuthConsumerSecret)
                 .setOAuthAccessToken(oAuthAccessToken)
                 .setOAuthAccessTokenSecret(oAuthAccessTokenSecret)
                 .setApplicationOnlyAuthEnabled(isApplicationOnlyAuth)
+                .setTweetModeExtended(true)
 
         TwitterFactory tf = new TwitterFactory(cb.build());
         // get twitter instance
@@ -620,7 +632,7 @@ class TwitterService {
         map.mediaEntities = status.mediaEntities.getProperties() as Map
         map.hashtagEntities = status.hashtagEntities.getProperties() as Map
         map.userMentionEntities = status.userMentionEntities.getProperties() as Map
-        map.extendedMediaEntities = status.extendedMediaEntities.getProperties() as Map
+        map.extendedMediaEntities = status.mediaEntities.getProperties() as Map
         map.retweetedStatus = status.retweetedStatus.getProperties() as Map
 
         return map
@@ -1114,6 +1126,13 @@ class TwitterService {
         return client.post(request.url, request.params, request.auth, request.listener)
     }
 
+    public HttpResponse put(String path, Map twitterMap, Map reqBody)
+            throws TwitterException {
+        def request = composeRequest(path, twitterMap, reqBody)
+        HttpClient client = request.httpClient
+        return client.put(request.url, request.params, request.auth, request.listener)
+    }
+
     public HttpResponse get(String path, Map twitterMap, Map reqBody)
             throws TwitterException {
         def request = composeRequest(path, twitterMap, reqBody)
@@ -1150,54 +1169,83 @@ class TwitterService {
     }
 
     /**
+     * Creates a new webhook for the application
      * @param props.url : The callback URL
      */
     public JSONObject createWebhook(Map props, Map twitterMap) {
-        def response = post("account_activity/webhooks.json", twitterMap, props)
+        def response = post(URL_CREATE_WEBHOOK_FMT, twitterMap, props)
         convertToJSONObject(response)
     }
 
     /**
-     * @param twitterMap : A map containing the Twitter OAuth credentials
+     * Updates the webhook url, useful to revalidate the webhook if it fails the
+     * Twitter daily validity check
+     * @param props: props.id {ID of the webhook to update}
      */
-    public JSONArray getWebhook(Map twitterMap) {
-        def response = get("account_activity/webhooks.json", twitterMap, [:])
-        convertToJSONArray(response)
-    }
-
-    def deleteWebhook(Map props, Map twitterMap){
-        delete("account_activity/webhooks/${props.webhookId}.json", twitterMap, [:])
+    public JSONObject updateWebhook(Map props, Map twitterMap) {
+        String formattedUrl = sprintf(URL_UPDATE_WEBHOOK_FMT, props.id)
+        def response = put(formattedUrl, twitterMap, [:])
+        convertToJSONObject(response)
     }
 
     /**
-     * Subscribe the authenticating user to the webhook with the supplied webhookId
-     * @param props.webhookId
+     * Fetches the webhook belonging to the application with the provided credentials
+     * @param twitterMap : A map containing the Twitter OAuth credentials
+     */
+    public JSONArray getWebhook(Map twitterMap) {
+        def response = get(URL_GET_WEBHOOK_FMT, twitterMap, [:])
+        convertToJSONArray(response)
+    }
+
+    /**
+     * Delete a webhook for an application with the credentials
+     * @param twitterMap: credentials
+     * @param props: props.id {ID of the webhook to delete}
+     * @return
+     */
+    def deleteWebhook(Map props, Map twitterMap){
+        String formattedUrl = sprintf(URL_DELETE_WEBHOOK_FMT, props.id)
+        def response = delete(formattedUrl, twitterMap, [:])
+        return response
+    }
+
+    /**
+     * Subscribe the authenticating user to the webhook
+     * @param props.url
      * Expected response 204: Subscription added for provided user.
      */
     def subscribeToWebhook(Map props, Map twitterMap){
-        def response = post("account_activity/webhooks/${props.webhookId}/subscriptions.json", twitterMap, [:])
+        def response = post(URL_SUBSCRIBE_TO_WEBHOOK_FMT, twitterMap, props)
+        return response
     }
 
     /**
      * Get the subscription of the authenticating user to the webhook with the supplied webhookId
      * @param props.webhookId
-     * Expected response 204: Subscription added for provided user.
+     * Expected response 204: Subscription removed for provided user.
      */
-    def webhookUnsubscribe(Map props, Map twitterMap){
-        def response = delete("account_activity/webhooks/${props.webhookId}/subscriptions.json", twitterMap, [:])
+    def webhookUnsubscribe(Map twitterMap){
+        def response = delete(URL_UNSUBSCRIBE_FROM_WEBHOOK_FMT, twitterMap, [:])
+        return response
     }
 
     def getWebhookSubscription(Map props, Map twitterMap){
-        def response = get("account_activity/webhooks/${props.webhookId}/subscriptions.json", twitterMap, [:])
+        def response = get(URL_GET_WEBHOOK_ID_FMT, twitterMap, [:])
+        return response
+    }
+
+    def getWebhookStatus(Map twitterMap) {
+        def response = get(URL_GET_WEBHOOK_SUBSCRIPTION_FMT, twitterMap, [:])
+        return response
     }
 
     /**
-     * Retrieve the list of active subscriptions to the webhook via the Direct Messages API
+     * Retrieve the list of active subscriptions to the webhook via the All Activities API
      * @param props.wehbookId
      * @param twitterMap
      */
     def getWebhookSubscriptionsList(Map props, Map twitterMap) {
-        def subscriptionsListResponse = get("account_activity/webhooks/${props.webhookId}/subscriptions/list.json", twitterMap, [:])
+        def subscriptionsListResponse = get(URL_GET_WEBHOOK_SUBSCRIPTION_FMT, twitterMap, [:])
         return subscriptionsListResponse
     }
 
